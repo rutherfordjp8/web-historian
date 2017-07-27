@@ -49,12 +49,13 @@ exports.addUrlToList = function(url, callback) {
   */
   this.readListOfUrls(function(data) {
     data.push(url);
-    fs.writeFile(this.paths.list, data, (err) => {
+    
+    fs.writeFile(exports.paths.list, data.join('\n'), (err) => {
       if (err) {
         throw err;
       }
       console.log('The file has been saved!');
-      callback();
+      callback(data);
     });
 
   });
@@ -62,6 +63,11 @@ exports.addUrlToList = function(url, callback) {
 };
 
 exports.isUrlArchived = function(url, callback) {
+  var siteUrl = this.paths.archivedSites + '/' + url;
+
+  fs.exists(siteUrl, (exists) => {
+    callback(exists);
+  });
 };
 
 exports.downloadUrls = function(urls) {
