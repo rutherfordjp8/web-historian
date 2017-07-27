@@ -21,14 +21,14 @@ exports.handleRequest = function (req, res) {
     //   resultsData = data;
     // });
     fs.readFile(__dirname + '/public/index.html', 'utf-8', function(err, data) {
-			if (err) {
-				console.log('error ' + err)
-			}
+      if (err) {
+        console.log('error ' + err);
+      }
 
       console.log(data);
-			res.writeHead(200, {'Content-Type': 'text/html'})
-			res.end(data);
-		})
+      res.writeHead(200, {'Content-Type': 'text/html'});
+      res.end(data);
+    });
 
   } else if (req.method === 'POST') {
     statusCode = 201;
