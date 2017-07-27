@@ -3,5 +3,10 @@ var archive = require('../helpers/archive-helpers');
 // require more modules/folders here!
 
 exports.handleRequest = function (req, res) {
-  res.end(archive.paths.list);
+  if (req.method === 'GET') {
+    var data = archive.readListOfUrls();
+  }
+  res.end({results: data});
+  //res.end(archive.paths.list);
+
 };
