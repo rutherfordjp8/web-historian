@@ -1,63 +1,62 @@
 var path = require('path');
 var archive = require('../helpers/archive-helpers');
 var fs = require('fs');
+var urlParser = require('url');
+var utils = require('./http-helpers');
 // require more modules/folders here!
-var headers = {
-  'access-control-allow-origin': '*',
-  'access-control-allow-methods': 'GET, POST, PUT, DELETE, OPTIONS',
-  'access-control-allow-headers': 'content-type, accept',
-  'access-control-max-age': 10 // Seconds.
-};
-var statusCode;
+
 
 exports.handleRequest = function (req, res) {
   if (req.method === 'GET') {
-    statusCode = 200;
-    res.writeHead(statusCode, headers);
 
-    // var resultsData;
-    // //Get the urls data
-    // archive.readListOfUrls(function(data) {
-    //   resultsData = data;
-    // });
-    fs.readFile(__dirname + '/public/index.html', 'utf-8', function(err, data) {
-      if (err) {
-        console.log('error ' + err);
-      }
+    var parts = urlParser.parse(req.url).pathname;
+    if (parts === '/') {
+      parts = '/index.html'; 
+    }
+    utils.serveAssets(res, parts, function() {
+      // trim leading slash if present
+      if (parts[0] === '/') { parts = parts.slice(1); }
 
-      console.log(data);
-      res.writeHead(200, {'Content-Type': 'text/html'});
-      res.end(data);
+      archive.isUrlInList(parts, function(found) {
+        if (found) {
+          utils.sendRedirect(res, '/loading.html');
+        } else {
+          utils.send404(res);
+        }
+      });
     });
-
-  } else if (req.method === 'POST') {
-    statusCode = 201;
-    res.writeHead(statusCode, headers);
-    res.end();
-
-  } else if (req.method === 'PUT') {
-    statusCode = 200;
-    res.writeHead(statusCode, headers);
-    res.end();
-
-  } else if (req.method === 'DELETE') {
-    statusCode = 200;
-    res.writeHead(statusCode, headers);
-    res.end();
-
-  } else if (req.method === 'OPTIONS') {
-    statusCode = 200;
-    res.writeHead(statusCode, headers);
-    res.end();
-
+  } else if (req.method === 'POST') { 
+    utils.collectData(req, function(data) {
+      var url = data.split('=')[1].replace('http://', '');
+      console.log(url);
+      // check sites.txt for web site
+      archive.isUrlInList(url, function(found) {
+        if (found) { // found site
+          // check if site is on disk
+          console.log(found);
+          archive.isUrlArchived(url, function(exists) {
+            if (exists) {
+              // redirect to site page (/www.google.com)
+              utils.sendRedirect(res, '/' + url);
+            } else {
+              // Redirect to loading.html
+              utils.sendRedirect(res, '/loading.html');
+            }
+          });
+        } else {
+          archive.addUrlToList(url, function() {
+            utils.sendRedirect(res, '/loading.html');
+          });
+        }
+      });
+    });
   } else {
-    statusCode = 404;
-    res.writeHead(statusCode, headers);
-    res.end();
-  }
+    utils.send404(res);
+  } 
+};
 
   // res.writeHead(statusCode, headers);
   // res.end({results: data});
   //res.end(archive.paths.list);
 
-};
+

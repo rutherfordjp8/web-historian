@@ -3,6 +3,7 @@ var path = require('path');
 var _ = require('underscore');
 var http = require('http');
 var request = require('request');
+var worker = require('../workers/htmlfetcher.js');
 /*
  * You will need to reuse the same paths many times over in the course of this sprint.
  * Consider using the `paths` object below to store frequently used file paths. This way,
@@ -15,8 +16,6 @@ exports.paths = {
   archivedSites: path.join(__dirname, '../archives/sites'),
   list: path.join(__dirname, '../archives/sites.txt')
 };
-
-
 
 // Used for stubbing paths for tests, do not modify
 exports.initialize = function(pathsObj) {
@@ -41,8 +40,11 @@ exports.readListOfUrls = function(callback) {
 };
 
 exports.isUrlInList = function(url, callback) {
-  this.readListOfUrls(function(data) {
-    callback(data.includes(url));
+  exports.readListOfUrls(function(sites) {
+    var found = _.any(sites, function(site, i) {
+      return site.match(url);
+    });
+    callback(found);
   });
 };
 
@@ -50,19 +52,10 @@ exports.addUrlToList = function(url, callback) {
   /*Add addUrlToList overwrites existing data, so we merge it 
   with current data by re-calling readListOfUrls
   */
-  this.readListOfUrls(function(data) {
-    data.push(url);
-    
-    fs.writeFile(exports.paths.list, data.join('\n'), (err) => {
-      if (err) {
-        throw err;
-      }
-      console.log('The file has been saved!');
-      callback(data);
-    });
-
+  fs.appendFile(exports.paths.list, url + '\n', function(err, file) {
+    callback();
+    worker.work();
   });
-  
 };
 
 exports.isUrlArchived = function(url, callback) {
@@ -74,11 +67,11 @@ exports.isUrlArchived = function(url, callback) {
 };
 
 exports.downloadUrls = function(urls) {
-  var urls = ['google.com', 'mightyhive.com', 'amazon.com'];
-  for (var i = 0; i < urls.length; i++) {
-  const writable = fs.createWriteStream('./archives/sites/' + urls[i] + '.txt');
-  request('http://www.' + urls[i]).pipe(writable);
-  }
-  // for (var i = 0; i < urls.length; i++) {
-  // }
+  // Iterate over urls and pipe to new files
+  console.log('blah', urls);
+  _.each(urls, function (url) {
+    if (!url) { return; }
+    request('http://' + url).pipe(fs.createWriteStream(exports.paths.archivedSites + '/' + url));
+  });
 };
+
